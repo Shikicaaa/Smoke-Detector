@@ -31,6 +31,32 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    
+  gql:
+    build:
+      context: .
+      dockerfile: backend/dockerfile.gql
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://iots:iots@db:5432/iots
+      SECRET_KEY: c8cb051bc8f4eed64b83c434e3932f25d5e1ee3871c1a9bc876c96b6ce94d46d
+      JWT_SECRET_KEY: c8cb051bc8f4eed64b83c434e3932f25d5e1ee3871c1a9bc876c96b6ce94d46d
+    ports:
+      - "8001:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+  
+  grpc:
+    build:
+      context: .
+      dockerfile: backend/dockerfile.grpc
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    depends_on:
+      db:
+        condition: service_healthy
  
 volumes:
   pgdata:
