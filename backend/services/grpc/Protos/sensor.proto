@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+option csharp_namespace = "Grpc";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+package sensor;
+
+message SensorReading {
+  google.protobuf.Timestamp time = 1;
+  google.protobuf.DoubleValue temperature_c = 2;
+  google.protobuf.DoubleValue humidity_percent = 3;
+  google.protobuf.Int32Value  tvoc_ppb = 4;
+  google.protobuf.Int32Value  eco2_ppm = 5;
+  google.protobuf.Int32Value  raw_h2 = 6;
+  google.protobuf.Int32Value  raw_ethanol = 7;
+  google.protobuf.DoubleValue pressure_hpa = 8;
+  google.protobuf.DoubleValue pm10 = 9;
+  google.protobuf.DoubleValue pm25 = 10;
+  google.protobuf.DoubleValue nc05 = 11;
+  google.protobuf.DoubleValue nc10 = 12;
+  google.protobuf.DoubleValue nc25 = 13;
+  google.protobuf.BoolValue fire_alarm       = 14;
+}
+
+message AggregationBucket {
+  google.protobuf.Timestamp bucket = 1;
+  google.protobuf.DoubleValue avg_temperature_c = 2;
+  google.protobuf.DoubleValue avg_humidity_percent = 3;
+  google.protobuf.DoubleValue avg_pressure_hpa = 4;
+  google.protobuf.DoubleValue avg_tvoc_ppb = 5;
+  google.protobuf.DoubleValue avg_eco2_ppm = 6;
+  google.protobuf.DoubleValue avg_pm25 = 7;
+  google.protobuf.DoubleValue avg_pm10 = 8;
+  int32 fire_alarm_count = 9;
+}
+
+message IngestRequest {
+  SensorReading reading = 1;
+}
+
+message IngestResponse {
+  bool success = 1;
+}
+
+message IngestBatchRequest {
+  repeated SensorReading readings = 1;
+}
+
+message IngestBatchResponse {
+  bool success  = 1;
+  int32 inserted = 2;
+}
+
+message SelectiveRequest {
+  google.protobuf.Timestamp start_time = 1;
+  google.protobuf.Timestamp end_time = 2;
+  int32 limit = 3;
+}
+
+message SelectiveReading {
+  google.protobuf.Timestamp time = 1;
+  google.protobuf.DoubleValue temperature_c = 2;
+  google.protobuf.DoubleValue humidity_percent = 3;
+}
+
+message SelectiveResponse {
+  repeated SelectiveReading readings = 1;
+}
+
+message AggregateRequest {
+  string bucket_interval = 1; // "1 hour", "30 minutes"
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
+  int32 limit = 4;
+}
+
+message AggregateResponse {
+  repeated AggregationBucket buckets = 1;
+}
+
+message LatestRequest {}
+
+message RangeRequest {
+  google.protobuf.Timestamp start_time = 1;
+  google.protobuf.Timestamp end_time = 2;
+  int32 limit = 3;
+}
+
+message RangeResponse {
+  repeated SensorReading readings = 1;
+}
+
+service SensorService {
+  rpc Ingest (IngestRequest) returns (IngestResponse);
+  rpc IngestBatch (IngestBatchRequest) returns (IngestBatchResponse);
+
+  rpc GetSelective (SelectiveRequest) returns (SelectiveResponse);
+
+  rpc GetAggregate (AggregateRequest) returns (AggregateResponse);
+
+  rpc GetLatest (LatestRequest) returns (SensorReading);
+  rpc GetRange  (RangeRequest)  returns (RangeResponse);
+}
