@@ -1,5 +1,6 @@
 create table sensor_data (
     time timestamptz not null,
+    
 
     temperature_c double precision,
     humidity_percent double precision,
@@ -13,7 +14,8 @@ create table sensor_data (
     nc05 double precision,
     nc10 double precision,
     nc25 double precision,
-    fire_alarm boolean
+    fire_alarm boolean,
+    PRIMARY KEY (time)
 );
 
 select create_hypertable('sensor_data', 'time');

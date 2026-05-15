@@ -1,7 +1,7 @@
-from fastapi import FastAPI, Depends, HTTPException, Request, APIRouter
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import api
+from backend.services import api
 
 
 allowed_origins = [
@@ -10,10 +10,8 @@ allowed_origins = [
 ]
 
 app = FastAPI(
-    version="0.1.0",
-    docs_url="/api/docs",
-    openapi_url="/api/openapi.json",
-    redoc_url="/api/redoc",
+    title="IoT Smoke Detection API",
+    version="1.0.0"
 )
 
 app.add_middleware(
@@ -24,3 +22,5 @@ app.add_middleware(
 )
 
 # router = api.register_routes()
+
+api.register_routes(app)
