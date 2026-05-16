@@ -1,13 +1,11 @@
 using Google.Protobuf.WellKnownTypes;
-using Grpc;
 using Grpc.Core;
 using Npgsql;
-using NpgsqlTypes;
-using Sensor;
-
-namespace Grpc.Services;
-
-public class SensorService : global::Sensor.SensorService.SensorServiceBase
+using SensorGrpc;
+ 
+namespace SensorGrpc.Services;
+ 
+public class SensorService : global::SensorGrpc.SensorService.SensorServiceBase
 {
     private readonly string _connectionString;
     private readonly ILogger<SensorService> _logger;
@@ -90,11 +88,11 @@ public class SensorService : global::Sensor.SensorService.SensorServiceBase
 
         await using var cmd = new NpgsqlCommand(sql, conn);
         cmd.Parameters.AddWithValue("start_time",
-            request.HasField(SelectiveRequest.StartTimeFieldNumber)
+            request.StartTime != null
                 ? (object)request.StartTime.ToDateTime()
                 : DBNull.Value);
         cmd.Parameters.AddWithValue("end_time",
-            request.HasField(SelectiveRequest.EndTimeFieldNumber)
+            request.EndTime != null
                 ? (object)request.EndTime.ToDateTime()
                 : DBNull.Value);
         cmd.Parameters.AddWithValue("limit", request.Limit > 0 ? request.Limit : 100);
@@ -105,9 +103,9 @@ public class SensorService : global::Sensor.SensorService.SensorServiceBase
         {
             response.Readings.Add(new SelectiveReading
             {
-                Time             = Timestamp.FromDateTime(reader.GetDateTime(0).ToUniversalTime()),
-                TemperatureC     = reader.IsDBNull(1) ? null : new DoubleValue { Value = reader.GetDouble(1) },
-                HumidityPercent  = reader.IsDBNull(2) ? null : new DoubleValue { Value = reader.GetDouble(2) },
+                Time = Timestamp.FromDateTime(reader.GetDateTime(0).ToUniversalTime()),
+                TemperatureC = reader.IsDBNull(1) ? null : reader.GetDouble(1),
+                HumidityPercent = reader.IsDBNull(2) ? null : reader.GetDouble(2),
             });
         }
 
@@ -125,9 +123,9 @@ public class SensorService : global::Sensor.SensorService.SensorServiceBase
         var limit = request.Limit > 0 ? request.Limit : 100;
 
         var conditions = new List<string>();
-        if (request.HasField(AggregateRequest.StartTimeFieldNumber))
+        if (request.StartTime != null)
             conditions.Add("time >= @start_time");
-        if (request.HasField(AggregateRequest.EndTimeFieldNumber))
+        if (request.EndTime != null)
             conditions.Add("time <= @end_time");
 
         var where = conditions.Count > 0
@@ -153,9 +151,9 @@ public class SensorService : global::Sensor.SensorService.SensorServiceBase
         await using var cmd = new NpgsqlCommand(sql, conn);
         cmd.Parameters.AddWithValue("interval", interval);
         cmd.Parameters.AddWithValue("limit", limit);
-        if (request.HasField(AggregateRequest.StartTimeFieldNumber))
+        if (request.StartTime != null)
             cmd.Parameters.AddWithValue("start_time", request.StartTime.ToDateTime());
-        if (request.HasField(AggregateRequest.EndTimeFieldNumber))
+        if (request.EndTime != null)
             cmd.Parameters.AddWithValue("end_time", request.EndTime.ToDateTime());
 
         var response = new AggregateResponse();
@@ -165,13 +163,13 @@ public class SensorService : global::Sensor.SensorService.SensorServiceBase
             response.Buckets.Add(new AggregationBucket
             {
                 Bucket = Timestamp.FromDateTime(reader.GetDateTime(0).ToUniversalTime()),
-                AvgTemperatureC = reader.IsDBNull(1) ? null : new DoubleValue { Value = reader.GetDouble(1) },
-                AvgHumidityPercent = reader.IsDBNull(2) ? null : new DoubleValue { Value = reader.GetDouble(2) },
-                AvgPressureHpa = reader.IsDBNull(3) ? null : new DoubleValue { Value = reader.GetDouble(3) },
-                AvgTvocPpb = reader.IsDBNull(4) ? null : new DoubleValue { Value = reader.GetDouble(4) },
-                AvgEco2Ppm = reader.IsDBNull(5) ? null : new DoubleValue { Value = reader.GetDouble(5) },
-                AvgPm25 = reader.IsDBNull(6) ? null : new DoubleValue { Value = reader.GetDouble(6) },
-                AvgPm10 = reader.IsDBNull(7) ? null : new DoubleValue { Value = reader.GetDouble(7) },
+                AvgTemperatureC = reader.IsDBNull(1) ? null : reader.GetDouble(1),
+                AvgHumidityPercent = reader.IsDBNull(2) ? null : reader.GetDouble(2),
+                AvgPressureHpa = reader.IsDBNull(3) ? null : reader.GetDouble(3),
+                AvgTvocPpb = reader.IsDBNull(4) ? null : reader.GetDouble(4),
+                AvgEco2Ppm = reader.IsDBNull(5) ? null : reader.GetDouble(5),
+                AvgPm25 = reader.IsDBNull(6) ? null : reader.GetDouble(6),
+                AvgPm10 = reader.IsDBNull(7) ? null : reader.GetDouble(7),
                 FireAlarmCount = reader.IsDBNull(8) ? 0 : reader.GetInt32(8),
             });
         }
@@ -246,19 +244,19 @@ public class SensorService : global::Sensor.SensorService.SensorServiceBase
             Time = Timestamp.FromDateTime(reader.GetDateTime(reader.GetOrdinal("time")).ToUniversalTime()),
         };
 
-        SetNullableDouble(reader, "temperature_c", v => reading.TemperatureC = new DoubleValue { Value = v });
-        SetNullableDouble(reader, "humidity_percent", v => reading.HumidityPercent = new DoubleValue { Value = v });
-        SetNullableInt (reader, "tvoc_ppb", v => reading.TvocPpb = new Int32Value { Value = v });
-        SetNullableInt (reader, "eco2_ppm", v => reading.Eco2Ppm = new Int32Value { Value = v });
-        SetNullableInt (reader, "raw_h2", v => reading.RawH2 = new Int32Value { Value = v });
-        SetNullableInt (reader, "raw_ethanol", v => reading.RawEthanol = new Int32Value  { Value = v });
-        SetNullableDouble(reader, "pressure_hpa", v => reading.PressureHpa = new DoubleValue { Value = v });
-        SetNullableDouble(reader, "pm10", v => reading.Pm10 = new DoubleValue { Value = v });
-        SetNullableDouble(reader, "pm25", v => reading.Pm25 = new DoubleValue { Value = v });
-        SetNullableDouble(reader, "nc05", v => reading.Nc05 = new DoubleValue { Value = v });
-        SetNullableDouble(reader, "nc10", v => reading.Nc10 = new DoubleValue { Value = v });
-        SetNullableDouble(reader, "nc25", v => reading.Nc25 = new DoubleValue { Value = v });
-        SetNullableBool  (reader, "fire_alarm", v => reading.FireAlarm = new BoolValue   { Value = v });
+        SetNullableDouble(reader, "temperature_c", v => reading.TemperatureC = v);
+        SetNullableDouble(reader, "humidity_percent", v => reading.HumidityPercent = v);
+        SetNullableInt (reader, "tvoc_ppb", v => reading.TvocPpb = v);
+        SetNullableInt (reader, "eco2_ppm", v => reading.Eco2Ppm = v);
+        SetNullableInt (reader, "raw_h2", v => reading.RawH2 = v);
+        SetNullableInt (reader, "raw_ethanol", v => reading.RawEthanol = v );
+        SetNullableDouble(reader, "pressure_hpa", v => reading.PressureHpa = v);
+        SetNullableDouble(reader, "pm10", v => reading.Pm10 = v);
+        SetNullableDouble(reader, "pm25", v => reading.Pm25 = v);
+        SetNullableDouble(reader, "nc05", v => reading.Nc05 = v);
+        SetNullableDouble(reader, "nc10", v => reading.Nc10 = v);
+        SetNullableDouble(reader, "nc25", v => reading.Nc25 = v);
+        SetNullableBool  (reader, "fire_alarm", v => reading.FireAlarm = v);
 
         return reading;
     }

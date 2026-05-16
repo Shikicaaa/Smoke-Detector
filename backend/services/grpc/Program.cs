@@ -1,4 +1,4 @@
-using Grpc.Services;
+using SensorGrpc.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

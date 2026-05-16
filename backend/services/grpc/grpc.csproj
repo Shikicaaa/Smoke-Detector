@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>Grpc</RootNamespace>
+    <RootNamespace>SensorGrpc</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,7 +16,7 @@
   </ItemGroup>
  
   <ItemGroup>
-    <Protobuf Include="Protos\sensor.proto" GrpcServices="Server" />
+    <Protobuf Include="Protos/sensor.proto" GrpcServices="Server" />
   </ItemGroup>
 
 </Project>
