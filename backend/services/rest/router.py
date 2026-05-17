@@ -3,6 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy import select, func, text
+from sqlalchemy.dialects.postgresql import insert
 
 from backend.models.database.core import DBSession
 from backend.models.database.sensor_data import SensorData
@@ -24,12 +25,15 @@ router = APIRouter(prefix="/api/v1/sensor", tags=["Sensor Data"])
     status_code=201,
 )
 async def ingest_sensor_data(payload: SensorDataIngest, db: DBSession):
+    stmt = insert(SensorData).values(**payload.model_dump())
 
-    record = SensorData(**payload.dict())
-    db.add(record)
+    stmt = stmt.on_conflict_do_nothing(index_elements=['time'])
+
+    await db.execute(stmt)
     await db.commit()
-    await db.refresh(record)
-    return record
+
+
+    return payload
 
 
 @router.post(
